@@ -244,6 +244,38 @@ test('Auto-hooks into Snacks.config and registers custom source', function()
   assert_eq(type(require('snacks.picker.config.sources').init_lua), 'table', 'Snacks picker init_lua source registered')
 end)
 
+-- -----------------------------------------------------------------------------
+-- 7. Test Finding init.lua outline from an unrelated buffer
+-- -----------------------------------------------------------------------------
+test('Snacks.picker.init_lua extracts outline when inside an unrelated buffer', function()
+  local sample_path = vim.fs.joinpath(root_dir, 'tests', 'sample_init.lua')
+  local unrelated_buf = create_test_buffer('/some/random/unrelated_file.md', {
+    '# Unrelated Markdown File',
+    'Some random text',
+  })
+  vim.api.nvim_set_current_buf(unrelated_buf)
+
+  picker.setup {
+    files = { sample_path },
+  }
+
+  -- Use M.finder targeting sample_path
+  local items = picker.finder({ file = sample_path })
+  assert_eq(#items > 0, true, 'Raw items found in target file')
+
+  local transformed = {}
+  for _, it in ipairs(items) do
+    local res = picker.transform(it)
+    if res ~= false then
+      table.insert(transformed, res)
+    end
+  end
+
+  assert_eq(#transformed, 10, 'Expected 10 transformed items from sample_init.lua')
+  assert_eq(transformed[1].name, 'General Options', 'First item name')
+  assert_eq(transformed[1].file, sample_path, 'File path matches sample_init.lua')
+end)
+
 print('\n==================================================')
 print(string.format('Tests run: %d | Passed: %d | Failed: %d', total_tests, passed_tests, failed_tests))
 print('==================================================\n')

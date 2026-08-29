@@ -9,12 +9,21 @@ local M = {}
 function M.is_target_file(bufnr, filepath)
   local cfg = config.get()
 
+  local path = filepath
+  if (not path or path == '') and bufnr and vim.api.nvim_buf_is_valid(bufnr) then
+    path = vim.api.nvim_buf_get_name(bufnr)
+  end
+  path = path or ''
+
+  if path == '' then
+    return false
+  end
+
   -- If a custom predicate or pattern list is configured
   if type(cfg.files) == 'function' then
-    return cfg.files(bufnr or 0, filepath or '')
+    return cfg.files(bufnr or 0, path)
   elseif type(cfg.files) == 'table' then
-    local path = filepath or (bufnr and vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_get_name(bufnr)) or ''
-    local real_path = (path ~= '' and vim.uv.fs_realpath(path)) or path
+    local real_path = vim.uv.fs_realpath(path) or path
     for _, pattern in ipairs(cfg.files) do
       if type(pattern) == 'string' then
         local exp_pattern = vim.fn.expand(pattern)
@@ -28,25 +37,20 @@ function M.is_target_file(bufnr, filepath)
   end
 
   -- Default auto-detection: $MYVIMRC or standard config/init.lua
-  local path = filepath or (bufnr and vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_get_name(bufnr)) or ''
-  if path == '' then
-    return false
-  end
-
-  local real_path = vim.uv.fs_realpath(path)
+  local real_path = vim.uv.fs_realpath(path) or path
 
   -- Check $MYVIMRC
   if vim.env.MYVIMRC then
-    local myvimrc_real = vim.uv.fs_realpath(vim.env.MYVIMRC)
-    if (myvimrc_real and real_path and myvimrc_real == real_path) or (vim.env.MYVIMRC == path) then
+    local myvimrc_real = vim.uv.fs_realpath(vim.env.MYVIMRC) or vim.env.MYVIMRC
+    if myvimrc_real == real_path or vim.env.MYVIMRC == path then
       return true
     end
   end
 
   -- Check stdpath('config')/init.lua
   local std_init = vim.fs.joinpath(vim.fn.stdpath('config'), 'init.lua')
-  local std_init_real = vim.uv.fs_realpath(std_init)
-  if (std_init_real and real_path and std_init_real == real_path) or (path == std_init) then
+  local std_init_real = vim.uv.fs_realpath(std_init) or std_init
+  if std_init_real == real_path or path == std_init then
     return true
   end
 
@@ -120,12 +124,14 @@ end
 ---@param ctx? table snacks.picker.finder.ctx
 ---@return table|boolean|nil
 function M.transform(item, ctx)
-  if not item or not item.buf then
+  if not item then
     return item
   end
 
+  local path = item.file or (item.buf and vim.api.nvim_buf_is_valid(item.buf) and vim.api.nvim_buf_get_name(item.buf)) or ''
+
   -- Only transform target files (e.g. init.lua)
-  if not M.is_target_file(item.buf) then
+  if not M.is_target_file(item.buf, path) then
     return item
   end
 
@@ -189,6 +195,50 @@ function M.transform(item, ctx)
   end
 
   return false
+end
+
+--- Dedicated finder for init.lua outline
+--- Extracts treesitter symbols directly from the target init.lua buffer regardless of current window/buffer
+---@param opts? table
+---@param ctx? table
+---@return table[]
+function M.finder(opts, ctx)
+  opts = opts or {}
+  local target_path = opts.file
+  if not target_path or target_path == '' then
+    target_path = vim.env.MYVIMRC or vim.fs.joinpath(vim.fn.stdpath('config'), 'init.lua')
+  end
+  target_path = vim.fn.expand(target_path)
+  local real_path = vim.uv.fs_realpath(target_path) or target_path
+
+  if not vim.uv.fs_stat(real_path) then
+    vim.notify('init-lua-picker: file not found: ' .. real_path, vim.log.levels.ERROR)
+    return {}
+  end
+
+  local buf = vim.fn.bufadd(real_path)
+  vim.fn.bufload(buf)
+  vim.bo[buf].filetype = 'lua'
+
+  local ts_source = require('snacks.picker.source.treesitter')
+  local fake_ctx = {
+    filter = {
+      current_buf = buf,
+    },
+  }
+  local ts_opts = {
+    filter = { lua = true },
+    tree = opts.tree ~= false,
+  }
+
+  local raw_items = ts_source.symbols(ts_opts, fake_ctx)
+  local items = {}
+  for _, item in ipairs(raw_items) do
+    item.file = real_path
+    item.buf = buf
+    table.insert(items, item)
+  end
+  return items
 end
 
 --- Chain multiple Snacks picker transform functions together
@@ -277,12 +327,11 @@ local function register_snacks_extensions()
     pcall(function()
       local sources = require('snacks.picker.config.sources')
       sources.init_lua = {
-        source = 'treesitter',
-        finder = 'treesitter_symbols',
+        finder = function(opts, ctx)
+          return M.finder(opts, ctx)
+        end,
+        format = 'lsp_symbol',
         tree = true,
-        filter = {
-          lua = true,
-        },
         transform = M.transform,
       }
     end)
@@ -294,35 +343,14 @@ end
 function M.open(opts)
   opts = opts or {}
 
-  local current_buf = vim.api.nvim_get_current_buf()
-  local current_path = vim.api.nvim_buf_get_name(current_buf)
-
-  local target_buf = current_buf
-  if not M.is_target_file(current_buf, current_path) then
-    local init_path = vim.env.MYVIMRC or vim.fs.joinpath(vim.fn.stdpath('config'), 'init.lua')
-    if vim.uv.fs_stat(init_path) then
-      target_buf = vim.fn.bufadd(init_path)
-      vim.fn.bufload(target_buf)
-    end
-  end
-
-  local picker_opts = vim.tbl_deep_extend('force', {
-    source = 'init_lua',
-    finder = 'treesitter_symbols',
-    tree = true,
-    filter = {
-      lua = true,
-      current_buf = target_buf,
-    },
-    transform = M.transform,
-  }, opts)
+  register_snacks_extensions()
 
   if _G.Snacks and _G.Snacks.picker then
-    return _G.Snacks.picker.pick(picker_opts)
+    return _G.Snacks.picker.pick('init_lua', opts)
   else
     local ok, snacks = pcall(require, 'snacks')
     if ok and snacks.picker then
-      return snacks.picker.pick(picker_opts)
+      return snacks.picker.pick('init_lua', opts)
     else
       vim.notify('init-lua-picker: snacks.nvim picker is not available', vim.log.levels.ERROR)
     end

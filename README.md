@@ -1,31 +1,43 @@
 # init-lua-picker.nvim
 
-A lightweight Neovim plugin that transforms [snacks.nvim](https://github.com/folke/snacks.nvim) Treesitter symbol picker into a high-level, structured outline navigator for your `init.lua` configuration.
+A lightweight Neovim plugin that transforms
+[snacks.nvim](https://github.com/folke/snacks.nvim) Treesitter symbol picker
+into a high-level, structured outline navigator for your `init.lua`
+configuration.
 
----
+______________________________________________________________________
 
 ## 🎯 Purpose
 
-In modular or monolithic Neovim configurations (especially single-file `init.lua` setups), default Treesitter and LSP symbol pickers can be flooded with hundreds of granular variables, assignments, and local closures.
+In modular or monolithic Neovim configurations (especially single-file
+`init.lua` setups), default Treesitter and LSP symbol pickers can be flooded
+with hundreds of granular variables, assignments, and local closures.
 
-`init-lua-picker` filters and transforms raw Treesitter symbols in your `init.lua` into a clean, hierarchical outline consisting of:
+`init-lua-picker` filters and transforms raw Treesitter symbols in your
+`init.lua` into a clean, hierarchical outline consisting of:
+
 1. **Top-level Sections** (`do ... end` blocks labeled by header comments)
-2. **Plugin Setup Blocks** (`require('...').setup`)
-3. **Autocommands** (`vim.api.nvim_create_autocmd(...)`)
-4. **Custom Matchers** (user-extensible patterns)
+1. **Plugin Setup Blocks** (`require('...').setup`)
+1. **Autocommands** (`vim.api.nvim_create_autocmd(...)`)
+1. **Custom Matchers** (user-extensible patterns)
 
-For all other buffers (e.g. your project files, Go, C++, Python, Markdown, etc.), the standard Treesitter symbol picker behavior is completely untouched.
+For all other buffers (e.g. your project files, Go, C++, Python, Markdown,
+etc.), the standard Treesitter symbol picker behavior is completely untouched.
 
----
+______________________________________________________________________
 
 ## 📐 Conventions
 
-To take full advantage of `init-lua-picker`, structure your `init.lua` using these conventions:
+To take full advantage of `init-lua-picker`, structure your `init.lua` using
+these conventions:
 
 ### 1. Section Blocks (`do ... end`)
-Enclose logical sections of your configuration inside top-level `do ... end` blocks preceded by a comment banner or inline comment.
+
+Enclose logical sections of your configuration inside top-level `do ... end`
+blocks preceded by a comment banner or inline comment.
 
 **Banner Headers (Recommended):**
+
 ```lua
 -- =============================================================================
 -- Options
@@ -44,6 +56,7 @@ end
 ```
 
 **Doc Comments or Simple Headers:**
+
 ```lua
 --- Autocommands
 do
@@ -57,16 +70,22 @@ end
 ```
 
 **Inline Comments:**
+
 ```lua
 do -- Misc & Integrations
   require('google')
 end
 ```
 
-The plugin automatically strips decorative banners (`=`, `-`, `*`, `~`, `#`) and comment leaders (`--`, `---`) to extract the clean title (e.g., `Options`, `Keymaps`, `Packages & Plugins`).
+The plugin automatically strips decorative banners (`=`, `-`, `*`, `~`, `#`) and
+comment leaders (`--`, `---`) to extract the clean title (e.g., `Options`,
+`Keymaps`, `Packages & Plugins`).
 
 ### 2. Plugin Setup Calls
-Any plugin configuration using the standard `require('...').setup` pattern is automatically detected and listed under the `Function` category:
+
+Any plugin configuration using the standard `require('...').setup` pattern is
+automatically detected and listed under the `Function` category:
+
 ```lua
 require('conform').setup { ... }
 require('diffview').setup { ... }
@@ -74,7 +93,10 @@ require('catppuccin').setup { ... }
 ```
 
 ### 3. Autocommand Calls
-`vim.api.nvim_create_autocmd` invocations are parsed and listed under the `Event` category with their event trigger:
+
+`vim.api.nvim_create_autocmd` invocations are parsed and listed under the
+`Event` category with their event trigger:
+
 ```lua
 vim.api.nvim_create_autocmd('BufEnter', { ... })
 -- Displays as: autocmd('BufEnter')
@@ -83,19 +105,25 @@ vim.api.nvim_create_autocmd({ 'VimEnter', 'UIEnter' }, { ... })
 -- Displays as: autocmd({ 'VimEnter', 'UIEnter' })
 ```
 
----
+______________________________________________________________________
 
 ## 🔌 Integration with Snacks.nvim
 
-`init-lua-picker` supports multiple integration workflows depending on how you prefer to organize your Neovim configuration:
+`init-lua-picker` supports multiple integration workflows depending on how you
+prefer to organize your Neovim configuration:
 
 ### Method 1: Automatic Hooking (Required *after* Snacks)
 
-Call `require('init-lua-picker').setup()` after `require('snacks').setup(...)`. It automatically:
-- Enables `filter.lua = true` in Snacks treesitter source (required for Treesitter to inspect `do ... end` scopes).
+Call `require('init-lua-picker').setup()` after `require('snacks').setup(...)`.
+It automatically:
+
+- Enables `filter.lua = true` in Snacks treesitter source (required for
+  Treesitter to inspect `do ... end` scopes).
 - Hooks into `Snacks.config.picker.sources.treesitter.transform`.
-- Preserves and chains any existing transform functions you already had configured.
-- Registers the custom `Snacks.picker.init_lua()` picker and named transform `"init_lua"`.
+- Preserves and chains any existing transform functions you already had
+  configured.
+- Registers the custom `Snacks.picker.init_lua()` picker and named transform
+  `"init_lua"`.
 
 ```lua
 -- 1. Setup snacks
@@ -111,7 +139,8 @@ require('init-lua-picker').setup()
 
 ### Method 2: Explicit Transform (Required *before* or during Snacks setup)
 
-If you prefer explicit declarative configuration, pass `require('init-lua-picker').transform` directly inside `snacks.setup`:
+If you prefer explicit declarative configuration, pass
+`require('init-lua-picker').transform` directly inside `snacks.setup`:
 
 ```lua
 local init_picker = require('init-lua-picker')
@@ -150,7 +179,8 @@ require('snacks').setup {
 
 ### Method 3: Combining / Chaining Multiple Transforms
 
-If you have other custom transforms for Treesitter symbols in other contexts, use `chain` or `wrap` to compose them together:
+If you have other custom transforms for Treesitter symbols in other contexts,
+use `chain` or `wrap` to compose them together:
 
 ```lua
 local init_picker = require('init-lua-picker')
@@ -175,7 +205,7 @@ require('snacks').setup {
 }
 ```
 
----
+______________________________________________________________________
 
 ## ⌨️ Suggested Keymaps
 
@@ -189,11 +219,12 @@ vim.keymap.set('n', '<leader>pi', function() require('init-lua-picker').open() e
 vim.keymap.set('n', '<leader>pi', function() Snacks.picker.init_lua() end, { desc = 'Pick init.lua section' })
 ```
 
----
+______________________________________________________________________
 
 ## 📦 Installation
 
 ### Neovim 0.12+ `vim.pack.add`
+
 ```lua
 vim.pack.add {
   'https://github.com/folke/snacks.nvim',
@@ -202,6 +233,7 @@ vim.pack.add {
 ```
 
 ### lazy.nvim
+
 ```lua
 {
   'xdecoret/init-lua-picker',
@@ -210,7 +242,7 @@ vim.pack.add {
 }
 ```
 
----
+______________________________________________________________________
 
 ## ⚙️ Configuration Options
 
@@ -282,7 +314,7 @@ require('init-lua-picker').setup {
 }
 ```
 
----
+______________________________________________________________________
 
 ## 📄 License
 

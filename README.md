@@ -228,7 +228,7 @@ ______________________________________________________________________
 ```lua
 vim.pack.add {
   'https://github.com/folke/snacks.nvim',
-  'path/to/init-lua-picker', -- or GitHub repository URL
+  'https://github.com/Xadeck/init-lua-picker',
 }
 ```
 
@@ -236,7 +236,7 @@ vim.pack.add {
 
 ```lua
 {
-  'xdecoret/init-lua-picker',
+  'Xadeck/init-lua-picker',
   dependencies = { 'folke/snacks.nvim' },
   opts = {},
 }

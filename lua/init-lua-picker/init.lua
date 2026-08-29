@@ -79,27 +79,26 @@ end
 --- Extract section title from preceding comments or inline comment
 ---@param bufnr number
 ---@param lnum number 1-indexed line number of `do`
----@param inline_text? string
 ---@return string
-function M.extract_section_name(bufnr, lnum, inline_text)
+function M.extract_section_name(bufnr, lnum)
   local cfg = config.get().sections or {}
   local max_lookback = cfg.max_header_lookback or 6
   local default_name = cfg.default_name or 'Section'
 
-  -- Check inline comment on the `do` line first
-  if inline_text then
-    local inline_comment = inline_text:match('^%s*do%s*%-%-%s*(.+)$')
-    if inline_comment then
-      local clean = clean_comment_line(inline_comment)
-      if clean ~= '' and not clean:match('^do$') and not clean:match('^[=%-%*~#]+$') then
-        return clean
-      end
+  -- Check inline comment on the exact `do` line first
+  local do_lines = vim.api.nvim_buf_get_lines(bufnr, math.max(0, lnum - 1), lnum, false)
+  local do_line = do_lines[1] or ''
+  local inline_comment = do_line:match('^%s*do%s*%-%-%s*(.+)$')
+  if inline_comment then
+    local clean = clean_comment_line(inline_comment)
+    if clean ~= '' and not clean:match('^do$') and not clean:match('^[=%-%*~#]+$') then
+      return clean
     end
   end
 
   -- Scan preceding lines upwards
   local start_line = math.max(0, lnum - (max_lookback + 1))
-  local lines = vim.api.nvim_buf_get_lines(bufnr, start_line, lnum, false)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, start_line, math.max(0, lnum - 1), false)
 
   for i = #lines, 1, -1 do
     local raw_line = lines[i]
@@ -136,7 +135,7 @@ function M.transform(item, ctx)
   if cfg.sections and cfg.sections.enabled ~= false then
     if item.depth == 1 and item.ts_kind == 'scope' and item.text and item.text:match('^%s*do%f[%s%z]') then
       local lnum = item.pos and item.pos[1] or 1
-      local name = M.extract_section_name(item.buf, lnum, item.text)
+      local name = M.extract_section_name(item.buf, lnum)
       item.name = name
       item.text = name
       item.kind = cfg.sections.kind or 'Namespace'

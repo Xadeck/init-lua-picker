@@ -1,17 +1,19 @@
 local M = {}
 
 ---@class InitLuaPickerSectionConfig
----@field enabled? boolean Enable section header detection from `do ... end` blocks
----@field max_header_lookback? number Number of lines above `do` to scan for comment headers
+---@field enabled? boolean Enable section header detection from `do ... end` blocks (default: true)
+---@field recursive? boolean Enable nested/recursive section detection (default: true)
+---@field max_depth? number Maximum nesting depth to detect (nil for unlimited, 1 for top-level only)
+---@field max_header_lookback? number Number of lines above `do` to scan for comment headers (default: 6)
 ---@field kind? string Symbol kind to assign in picker (default: 'Namespace')
----@field default_name? string Fallback name prefix when no comment header is found
+---@field default_name? string Fallback name prefix when no comment header is found (default: 'Section')
 
 ---@class InitLuaPickerSetupConfig
----@field enabled? boolean Enable `require('...').setup` detection
+---@field enabled? boolean Enable `require('...').setup` detection (default: true)
 ---@field kind? string Symbol kind to assign in picker (default: 'Function')
 
 ---@class InitLuaPickerAutocmdConfig
----@field enabled? boolean Enable `nvim_create_autocmd` detection
+---@field enabled? boolean Enable `nvim_create_autocmd` detection (default: true)
 ---@field kind? string Symbol kind to assign in picker (default: 'Event')
 
 ---@class InitLuaPickerConfig
@@ -32,6 +34,8 @@ M.defaults = {
   keep_unmatched = false,
   sections = {
     enabled = true,
+    recursive = true,
+    max_depth = nil,
     max_header_lookback = 6,
     kind = 'Namespace',
     default_name = 'Section',

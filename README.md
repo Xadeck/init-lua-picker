@@ -77,9 +77,46 @@ do -- Misc & Integrations
 end
 ```
 
+**Nested / Recursive Sections (Subsections):**
+
+Sections can be grouped recursively inside parent `do ... end` blocks. Snacks picker displays them with proper tree hierarchy and indentation:
+
+```lua
+-- =============================================================================
+-- Options
+-- =============================================================================
+do
+  -- ---------------------------------------------------------------------------
+  -- UI & Display
+  -- ---------------------------------------------------------------------------
+  do
+    vim.opt.number = true
+    vim.opt.relativenumber = true
+  end
+
+  -- ---------------------------------------------------------------------------
+  -- Indentation
+  -- ---------------------------------------------------------------------------
+  do
+    vim.opt.tabstop = 2
+    vim.opt.shiftwidth = 0
+  end
+end
+
+-- =============================================================================
+-- Keymaps
+-- =============================================================================
+do
+  do -- Buffer Navigation
+    vim.keymap.set('n', '<leader>w', ':update<CR>')
+    vim.keymap.set('n', '<leader>d', ':BufDel<CR>')
+  end
+end
+```
+
 The plugin automatically strips decorative banners (`=`, `-`, `*`, `~`, `#`) and
 comment leaders (`--`, `---`) to extract the clean title (e.g., `Options`,
-`Keymaps`, `Packages & Plugins`).
+`UI & Display`, `Keymaps`).
 
 ### 2. Plugin Setup Calls
 
@@ -268,6 +305,8 @@ require('init-lua-picker').setup {
   -- Section header settings (`do ... end` blocks preceded by comments)
   sections = {
     enabled = true,
+    recursive = true,           -- Enable nested/recursive section grouping
+    max_depth = nil,            -- nil = unlimited depth, or set number (e.g. 1 for top-level only)
     max_header_lookback = 6,    -- Number of lines above `do` to scan for comment headers
     kind = 'Namespace',         -- Symbol kind icon in picker
     default_name = 'Section',   -- Fallback name prefix if no header comment found

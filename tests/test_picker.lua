@@ -276,6 +276,74 @@ test('Snacks.picker.init_lua extracts outline when inside an unrelated buffer', 
   assert_eq(transformed[1].file, sample_path, 'File path matches sample_init.lua')
 end)
 
+-- -----------------------------------------------------------------------------
+-- 8. Test Recursive / Nested Section Detection
+-- -----------------------------------------------------------------------------
+test('Recursively extracts nested do ... end sections with proper depth', function()
+  local nested_path = '/home/user/test_nested_init.lua'
+  local buf = create_test_buffer(nested_path, {
+    '-- =============================================================================',
+    '-- Options',
+    '-- =============================================================================',
+    'do',
+    '  -- ---------------------------------------------------------------------------',
+    '  -- UI & Display',
+    '  -- ---------------------------------------------------------------------------',
+    '  do',
+    '    vim.opt.number = true',
+    '  end',
+    '',
+    '  -- ---------------------------------------------------------------------------',
+    '  -- Indentation',
+    '  -- ---------------------------------------------------------------------------',
+    '  do',
+    '    vim.opt.tabstop = 2',
+    '  end',
+    'end',
+    '',
+    '-- Keymaps',
+    'do',
+    '  do -- Buffer Navigation',
+    '    vim.keymap.set("n", "<leader>w", ":w<cr>")',
+    '  end',
+    'end',
+  })
+
+  picker.setup {
+    files = { nested_path },
+    sections = { recursive = true },
+  }
+
+  local items = picker.finder({ file = nested_path })
+  local transformed = {}
+  for _, it in ipairs(items) do
+    local res = picker.transform(it)
+    if res ~= false then
+      table.insert(transformed, {
+        name = res.name,
+        kind = res.kind,
+        depth = res.depth,
+        line = res.pos[1],
+      })
+    end
+  end
+
+  local expected_nested = {
+    { name = 'Options', depth = 1, line = 4 },
+    { name = 'UI & Display', depth = 2, line = 8 },
+    { name = 'Indentation', depth = 2, line = 15 },
+    { name = 'Keymaps', depth = 1, line = 21 },
+    { name = 'Buffer Navigation', depth = 2, line = 22 },
+  }
+
+  assert_eq(#transformed, #expected_nested, 'Nested item count')
+  for i, exp in ipairs(expected_nested) do
+    assert_eq(transformed[i].name, exp.name, string.format('Nested item %d name', i))
+    assert_eq(transformed[i].depth, exp.depth, string.format('Nested item %d depth', i))
+    assert_eq(transformed[i].line, exp.line, string.format('Nested item %d line', i))
+  end
+end)
+
 print('\n==================================================')
 print(string.format('Tests run: %d | Passed: %d | Failed: %d', total_tests, passed_tests, failed_tests))
 print('==================================================\n')

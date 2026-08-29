@@ -137,9 +137,11 @@ function M.transform(item, ctx)
 
   local cfg = config.get()
 
-  -- 1. Top-level section (do ... end blocks)
+  -- 1. Section (do ... end blocks, top-level and nested)
   if cfg.sections and cfg.sections.enabled ~= false then
-    if item.depth == 1 and item.ts_kind == 'scope' and item.text and item.text:match('^%s*do%f[%s%z]') then
+    local max_depth = cfg.sections.max_depth or (cfg.sections.recursive == false and 1 or math.huge)
+    local item_depth = item.depth or 1
+    if item_depth <= max_depth and item.ts_kind == 'scope' and item.text and item.text:match('^%s*do%f[%s%z]') then
       local lnum = item.pos and item.pos[1] or 1
       local name = M.extract_section_name(item.buf, lnum)
       item.name = name
@@ -204,20 +206,32 @@ end
 ---@return table[]
 function M.finder(opts, ctx)
   opts = opts or {}
+  local buf = opts.buf
+
   local target_path = opts.file
   if not target_path or target_path == '' then
-    target_path = vim.env.MYVIMRC or vim.fs.joinpath(vim.fn.stdpath('config'), 'init.lua')
+    if not buf or not vim.api.nvim_buf_is_valid(buf) then
+      target_path = vim.env.MYVIMRC or vim.fs.joinpath(vim.fn.stdpath('config'), 'init.lua')
+    else
+      target_path = vim.api.nvim_buf_get_name(buf)
+    end
   end
   target_path = vim.fn.expand(target_path)
   local real_path = vim.uv.fs_realpath(target_path) or target_path
 
-  if not vim.uv.fs_stat(real_path) then
-    vim.notify('init-lua-picker: file not found: ' .. real_path, vim.log.levels.ERROR)
-    return {}
+  if not buf or not vim.api.nvim_buf_is_valid(buf) then
+    local existing_buf = vim.fn.bufnr(real_path)
+    if existing_buf ~= -1 and vim.api.nvim_buf_is_valid(existing_buf) then
+      buf = existing_buf
+    elseif vim.uv.fs_stat(real_path) then
+      buf = vim.fn.bufadd(real_path)
+      vim.fn.bufload(buf)
+    else
+      vim.notify('init-lua-picker: file not found: ' .. real_path, vim.log.levels.ERROR)
+      return {}
+    end
   end
 
-  local buf = vim.fn.bufadd(real_path)
-  vim.fn.bufload(buf)
   vim.bo[buf].filetype = 'lua'
 
   local ts_source = require('snacks.picker.source.treesitter')

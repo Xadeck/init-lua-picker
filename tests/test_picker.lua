@@ -21,6 +21,22 @@ for _, p in ipairs(potential_snacks_paths) do
   end
 end
 
+-- Ensure nvim-treesitter (for base queries like locals.scm) is in runtimepath
+local potential_ts_paths = {
+  root_dir .. '/.deps/nvim-treesitter/runtime',
+  root_dir .. '/.deps/nvim-treesitter',
+  data_dir .. '/lazy/nvim-treesitter/runtime',
+  data_dir .. '/site/pack/core/opt/nvim-treesitter/runtime',
+  vim.fn.expand('~/.local/share/nvim/lazy/nvim-treesitter/runtime'),
+  vim.fn.expand('~/.local/share/nvim/site/pack/core/opt/nvim-treesitter/runtime'),
+}
+for _, p in ipairs(potential_ts_paths) do
+  if vim.uv.fs_stat(p) then
+    vim.opt.rtp:append(p)
+  end
+end
+
+
 -- Initialize snacks
 local ok_snacks, snacks = pcall(require, 'snacks')
 if ok_snacks and snacks.setup then

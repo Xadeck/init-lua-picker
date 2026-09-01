@@ -9,6 +9,7 @@ vim.opt.rtp:append(root_dir)
 -- Ensure snacks.nvim is in runtimepath even when running with `nvim -u NONE`
 local data_dir = vim.fn.stdpath('data')
 local potential_snacks_paths = {
+  root_dir .. '/.deps/snacks.nvim',
   data_dir .. '/lazy/snacks.nvim',
   data_dir .. '/site/pack/core/opt/snacks.nvim',
   vim.fn.expand('~/.local/share/nvim/lazy/snacks.nvim'),

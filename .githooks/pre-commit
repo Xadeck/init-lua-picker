@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+echo "Running presubmit tests before commit..."
+bash "$REPO_ROOT/tests/run_tests.sh"

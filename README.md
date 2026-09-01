@@ -355,6 +355,25 @@ require('init-lua-picker').setup {
 
 ______________________________________________________________________
 
+## 🧪 Testing & Presubmits
+
+Run the test suite locally with:
+
+```bash
+bash tests/run_tests.sh
+```
+
+To automatically run tests before every commit and push, configure Git to use the repo's presubmit hooks:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+GitHub Actions will also run the test suite on every push and pull request.
+
+______________________________________________________________________
+
 ## 📄 License
 
 MIT
+

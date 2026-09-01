@@ -1,8 +1,10 @@
 -- Standalone Unit Test Suite for init-lua-picker.nvim
 -- Run with: nvim --headless -u NONE -c "luafile tests/test_picker.lua" -c "q"
 
-local root_dir = vim.fs.dirname(vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2)))
+local script_dir = vim.fs.dirname(debug.getinfo(1, 'S').source:sub(2))
+local root_dir = vim.uv.fs_realpath(vim.fs.dirname(script_dir)) or vim.fs.dirname(script_dir)
 package.path = root_dir .. '/lua/?.lua;' .. root_dir .. '/lua/?/init.lua;' .. package.path
+vim.opt.rtp:append(root_dir)
 
 -- Ensure snacks.nvim is in runtimepath even when running with `nvim -u NONE`
 local data_dir = vim.fn.stdpath('data')

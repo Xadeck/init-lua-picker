@@ -40,11 +40,11 @@ local function test(name, fn)
   local ok, err = pcall(fn)
   if ok then
     passed_tests = passed_tests + 1
-    print('\27[32m✓ PASS\27[0m')
+    io.write('\27[32m✓ PASS\27[0m\n')
   else
     failed_tests = failed_tests + 1
-    print('\27[31m✗ FAIL\27[0m')
-    print('    Error: ' .. tostring(err))
+    io.write('\27[31m✗ FAIL\27[0m\n')
+    io.write('    Error: ' .. tostring(err) .. '\n')
   end
 end
 
@@ -158,12 +158,6 @@ test('Simulate visual picker rendering snapshot', function()
       table.insert(lines_rendered, line_str)
     end
   end
-
-  print('\n    --- Visual Picker Preview ---')
-  for _, l in ipairs(lines_rendered) do
-    print('    ' .. l)
-  end
-  print('    -----------------------------')
 
   assert_eq(#lines_rendered, 10, 'Rendered picker should contain exactly 10 items')
 end)
